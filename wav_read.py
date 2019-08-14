@@ -40,8 +40,11 @@ def write_audio_data(filename, rate, wav_data):
 #%%
 def audio_pre_processing(data, sr, sr_new):
     # Convert to mono.
-    if data.shape[1] > 1:
-      data = np.mean(data, axis=1)
+    try:
+        if data.shape[1] > 1:
+            data = np.mean(data, axis=1)
+    except:
+        pass
     # Resampling the data to specified rate
     if sr != sr_new:
       data = resampy.resample(data, sr, sr_new)
@@ -153,16 +156,22 @@ def frames_processing(frames, option):
         
     elif option == 4:
         frames_new = cp.deepcopy(frames)
-        percentage = 0.5   # % of frames to be replaced
-        neighbor_range = 10   # range of nearby frames, one-sided
+        percentage = 0.7   # % of frames to be replaced
+        neighbor_range = 50   # range of nearby frames, one-sided
         # select target frames
-        frames_to_be_replaced = np.random.choice(np.arange(neighbor_range, frames.shape[0]-neighbor_range), 
+        frames_to_be_replaced = np.random.choice(np.arange(0, frames.shape[0]), 
                                           size=round(percentage*(frames.shape[0]-neighbor_range*2)),
                                           replace=False)
         print('frames to be replaced:', np.sort(frames_to_be_replaced), 'size:', len(frames_to_be_replaced))
         for i in frames_to_be_replaced:
             # select a nearby frame, including the target frame itself
-            neighbour = np.random.choice(np.arange(i-neighbor_range, i+neighbor_range))   
+            # include two edge cases
+            if i <= neighbor_range:
+                neighbour = np.random.choice(np.arange(0, i+neighbor_range))
+            elif (i+neighbor_range) >= frames.shape[0]:
+                neighbour = np.random.choice(np.arange(i-neighbor_range, frames.shape[0]-1))
+            else:
+                neighbour = np.random.choice(np.arange(i-neighbor_range, i+neighbor_range))   
             # replacement
             frames_new[i] = frames[neighbour]   
             
@@ -171,7 +180,7 @@ def frames_processing(frames, option):
         np.random.shuffle(frames_new)   # only 1st axis (frame index) is shuffled
         
     elif option == 6:
-        percentage = 0.5   # % of frames to drop
+        percentage = 0.7   # % of frames to drop
          # select target frames
         frames_to_drop = np.random.choice(frames.shape[0], 
                                           size=round(percentage*frames.shape[0]),
@@ -197,4 +206,3 @@ def frames_processing(frames, option):
 
     print('new frames shape:', frames_new.shape)
     return frames_new
-
