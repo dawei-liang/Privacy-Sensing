@@ -10,36 +10,53 @@ from numpy.random import seed
 from tensorflow import set_random_seed
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 import keras as K
 from keras.models import Sequential
 from keras.layers import Dense, Conv1D, Flatten, Dropout, BatchNormalization, Activation, MaxPooling1D
-from keras.optimizers import SGD, Adadelta
+from keras.optimizers import SGD
 from keras.losses import categorical_crossentropy
 from keras.callbacks import EarlyStopping
 from keras.utils import np_utils
-from sklearn.model_selection import StratifiedKFold
-from sklearn.utils import shuffle
+from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
+import itertools
 
-import wav_read
+import check_dirs
 
 #%%
-#classes = ['bathing',
-#          'flushing',
-#          'brushing',
-#          'shaver',
-#          'frying',
-#          'chopping',
-#          'micro',
-#          'boiling', 
-#          'blender',
-#          'TV', 
-#          'piano', 
-#          'vacuum',  
-#          'washing',
-#          'chatting', 
-#          'strolling']
-classes=['bathing','flushing']
+
+#classes = ['Bathing',
+#          'Flushing',
+#          'Brushing',
+#          'Doing shaver',
+#          'Frying',
+#          'Chopping',
+#          'Microwave oven',
+#          'Boiling', 
+#          'Blender',
+#          'Watching TV', 
+#          'Listening musics', 
+#          'Vacuum cleaning',  
+#          'Washing',
+#          'Chatting', 
+#          'Strolling']
+classes = ['A',
+          'B',
+          'C',
+          'D',
+          'E',
+          'F',
+          'G',
+          'H', 
+          'I',
+          'J', 
+          'K', 
+          'L',  
+          'M',
+          'N', 
+          'O']
+#classes=['bathing','flushing']
 # Fix random seed
 seed(0)
 set_random_seed(0)
@@ -48,22 +65,21 @@ set_random_seed(0)
     
 def cnn_model_fn(class_size):
         model = Sequential()
-        model.add(Conv1D(32, 8, strides=1, activation='relu', padding="same", input_shape=(13,1)))
+        model.add(Conv1D(16, 8, strides=1, activation='relu', padding="same", input_shape=(13,1)))
         model.add(BatchNormalization())
-        #model.add(Dropout(0.1))
-        model.add(Conv1D(64, 8, strides=1, activation='relu', padding="same"))
+        model.add(Dropout(0.1))
+        model.add(Conv1D(32, 8, strides=1, activation='relu', padding="same"))
         model.add(BatchNormalization())
-        #model.add(Dropout(0.1))
-        model.add(Conv1D(64, 4, strides=1, activation='relu', padding="same"))
+        model.add(Dropout(0.1))
+        model.add(Conv1D(32, 8, strides=1, activation='relu', padding="same"))
         model.add(BatchNormalization())
-        #model.add(Dropout(0.1))
-        print(model.output.shape)
+        model.add(Dropout(0.1))
         model.add(Flatten())
-        model.add(Dense(200, activation ='relu'))
-        model.add(Dropout(0.2))
+        #model.add(Dense(50, activation ='relu'))
+        #model.add(Dropout(0.3))
         model.add(Dense(class_size, activation='softmax'))
             
-        opt = SGD(lr=0.001, decay=1e-6, momentum=0.9, nesterov=True)
+        opt = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
         loss = categorical_crossentropy
         model.compile(loss=loss,
                   optimizer=opt,
@@ -72,9 +88,10 @@ def cnn_model_fn(class_size):
     
 #%%
 """
-Save model and architecture
+Save model and architecture, not used
 """
 def save_model(clf, count, save_model_dir):
+    check_dirs.check_dir(save_model_dir)
     clf.save(save_model_dir + str(count) + 'temp.hdf5')   # Save model
     yaml_string = clf.to_yaml()
     with open(save_model_dir + \
@@ -86,97 +103,135 @@ def save_model(clf, count, save_model_dir):
 """
 one-hot encoding and training data reshaping
 """
-def reshape_data_labels(data, labels, mfcc_size, class_size):
-    # Reshape training data as (#,size_mfcc,1) for CNN
-    data = np.reshape(data, (data.shape[0], mfcc_size, 1))   
+def reshape_data_labels(data, labels, feature_size, class_size):
+    # Reshape training data as (#,feature_size,1) for CNN
+    data = np.reshape(data, (data.shape[0], feature_size, 1))   
     # One-hot encoding for training labels: (#,size_labels)
     labels = np_utils.to_categorical(labels, class_size)
     return data, labels
-    
+
+
 #%%
 """
-data loading and feature extraction
+plot confusion matrix
 """
-dir_load_audio = './processed_user_data/'
+
+def plot_confusion_matrix(cm, classes,
+                          normalize=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues):
+
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+
+    print(cm)
+
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    fmt = '.2f' if normalize else 'd'
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('Ground Truth')
+    plt.xlabel('Predicted Activities')
+
+
+#%%
+"""
+Load data
+"""
+load_data_dir = './processed_user_data_fold-based/neighbouring_range_test/1000/test3/'
 save_model_dir = './models/'
-new_sampling_rate=16000   # Hz
-window_length_secs=0.1   # sec
-hop_length_secs = 0.05 #   sec
-mfcc_size = 13
+names = ['training_fold1',
+         'training_fold2',
+         'training_fold3',
+         'training_fold4',
+         'training_fold5',
+         'validation_fold1',
+         'validation_fold2',
+         'validation_fold3',
+         'validation_fold4',
+         'validation_fold5']
+training_fold = 3   # 1 to 5
+training = True
 
-# load data and labels
-audio_file_list = [x for x in os.listdir(dir_load_audio) if x.endswith('.wav')]   # Load wave files
-audio_data_processed, audio_data_original, labels = [], [], []
-for class_item in classes:
-    print('loading class ', class_item)
-    labels.append(class_item)   # activity classes in use
-    for file_item in audio_file_list:
-        if class_item in file_item:
-            # load and scale the audio
-            path = os.path.join(dir_load_audio, file_item)
-            file_sampling_rate, scaled_data = wav_read.read_audio_data(file=path)
-            assert file_sampling_rate == new_sampling_rate, 'loaded sampling rate is not the same as new_sampling_rate'
-            # seperate original sounds and privacy processed sounds
-            if 'original' in file_item:
-                audio_data_original.append(scaled_data)
-            elif 'processed' in file_item:
-                audio_data_processed.append(scaled_data)
-            
-print('loaded original audio number, loaded processed audio number, label size: ', 
-      len(audio_data_original), len(audio_data_processed), len(labels))
-
-# feature extraction
-feature_label_list = []
-mfcc_list_original, mfcc_list_processed = np.empty((0,mfcc_size)), np.empty((0,mfcc_size))
-# loop for each activity class k
-for label_i in range(len(labels)):   
-    mfcc_feat_original = mfcc(signal=audio_data_original[label_i], 
-                         samplerate=file_sampling_rate,
-                         winlen=window_length_secs,
-                         winstep=hop_length_secs,
-                         numcep=mfcc_size,
-                         nfilt=26)   # mfcc of original audio
-    mfcc_list_original = np.vstack((mfcc_list_original, mfcc_feat_original))
-    mfcc_feat_processed = mfcc(signal=audio_data_original[label_i], 
-                         samplerate=file_sampling_rate,
-                         winlen=window_length_secs,
-                         winstep=hop_length_secs,
-                         numcep=mfcc_size,
-                         nfilt=26)   # mfcc of privacy processed audio
-    mfcc_list_processed = np.vstack((mfcc_list_processed, mfcc_feat_processed))
-    feature_label_list.append([label_i] * mfcc_feat_processed.shape[0])   # list of labels of the features
-flattened_feature_label_list = [item for sublist in feature_label_list for item in sublist]
-    
+training_frame = pd.read_csv(load_data_dir + names[training_fold-1] + '.csv', header=None).values  
+valid_frame = pd.read_csv(load_data_dir + names[training_fold + 4] + '.csv', header=None).values
+training_data, training_labels = training_frame[:,:13], training_frame[:,13]
+valid_data, valid_labels = valid_frame[:,:13], valid_frame[:,13]
+ 
 #%%
 """
 training and test
 """
-data_original, labels_original = reshape_data_labels(data=mfcc_list_original, 
-                                                     labels=flattened_feature_label_list, 
-                                                     mfcc_size=mfcc_size, 
-                                                     class_size=len(labels))
-data_processed, labels_processed = reshape_data_labels(data=mfcc_list_original, 
-                                                       labels=flattened_feature_label_list, 
-                                                       mfcc_size=mfcc_size, 
-                                                       class_size=len(labels))
-data_original, labels_original = shuffle(data_original, labels_original)
-data_processed, labels_processed = shuffle(data_processed, labels_processed)
-print('data shape to CNN:, labels shape to CNN: ', data_processed.shape, labels_processed.shape)
-model = cnn_model_fn(class_size=len(labels))
-model.fit(data_original[:3000], labels_original[:3000],   
-            batch_size=32,
-            epochs=5,
-            verbose=2,
-            validation_data = (data_original[3000:4000], labels_original[3000:4000]),
-            shuffle=True,
-            callbacks=[EarlyStopping(monitor='val_acc', patience=5, mode='auto')])
-save_model(model, count=1, save_model_dir=save_model_dir)
-print('Well trained and saved')
+#data_original, labels_original = reshape_data_labels(data=mfcc_list_original, 
+#                                                     labels=flattened_feature_label_list, 
+#                                                     mfcc_size=mfcc_size, 
+#                                                     class_size=len(labels))
+training_data, onehot_training_labels = reshape_data_labels(data=training_data, 
+                                                            labels=training_labels, 
+                                                            feature_size=training_data.shape[1], 
+                                                            class_size=len(classes))
+valid_data, onehot_valid_labels = reshape_data_labels(data=valid_data, 
+                                                      labels=valid_labels, 
+                                                      feature_size=valid_data.shape[1], 
+                                                      class_size=len(classes))
+#data_original, labels_original = shuffle(data_original, labels_original)
+#data_processed, labels_processed = shuffle(data_processed, labels_processed)
+print('training data shape:, labels shape: ', training_data.shape, onehot_training_labels.shape)
 
+if training:
+    # check save path
+    check_dirs.check_dir(save_model_dir)
+    model = cnn_model_fn(class_size=len(classes))
+    model.fit(training_data, onehot_training_labels,   
+              batch_size=128,
+              epochs=20,
+              verbose=2,
+              validation_data = (valid_data, onehot_valid_labels),
+              shuffle=True,
+              callbacks=[EarlyStopping(monitor='val_acc', patience=5, mode='auto'),
+                         K.callbacks.ModelCheckpoint(save_model_dir+"neighbouring_test-1000-fold3-epoch_{epoch:02d}-val_{val_acc:.4f}.hdf5", 
+                                                     monitor='val_acc', 
+                                                     verbose=0, 
+                                                     save_best_only=True, 
+                                                     save_weights_only=False, 
+                                                     mode='auto', 
+                                                     period=1)])
+    #save_model(model, count=1, save_model_dir=save_model_dir)
+    print('Well trained and saved')
+
+else:
+    model = cnn_model_fn(class_size=len(classes))
+    model.load_weights('./final models both/0/method0-fold5-epoch_02-val_0.5606.hdf5')
+    predictions = model.predict(valid_data)
+    predictions = np.argmax(predictions, axis=1)
+    acc = accuracy_score(valid_labels, predictions)
+    f1 = f1_score(valid_labels, predictions, average='weighted')
+    print("%s: %.4f%% %.4f%%" % ('acc, f1:', acc, f1))   
+#%%    
+    # confusion matrix
+    predictions = np.reshape(predictions, (predictions.shape[0], 1))
+    valid_labels = np.reshape(valid_labels, (valid_labels.shape[0], 1))
+    # need to be commented when accumulating results
+    #prediction_container, label_container = np.empty((0,1)), np.empty((0,1))   
+    prediction_container, label_container = np.vstack((prediction_container, predictions)), np.vstack((label_container, valid_labels))
 #%%
-"""
-evaluate the model
-"""
-scores1 = model.evaluate(data_original, labels_original, verbose=1)
-scores2 = model.evaluate(data_processed, labels_processed, verbose=1)
-print("%s: %.2f%% %.2f%%" % (model.metrics_names[1], scores1[1]*100, scores2[1]*100))        
+    C = confusion_matrix(label_container, prediction_container)
+    plt.figure(num=1, figsize=(7,7))
+    display_names = classes
+    plot_confusion_matrix(C, classes=display_names, normalize=True,
+                          title='Predicted Results')
+    plt.show()     

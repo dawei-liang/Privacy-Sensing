@@ -6,7 +6,7 @@ Created on Sat Jul 13 16:00:54 2019
 """
 
 """
-Load user audio and save original/processed data
+Load user audio and save original/processed data as individual activity class (class-based).
 """
 
 import os
@@ -18,29 +18,29 @@ import wav_read
 import check_dirs
 
 #%%
-#classes = ['bathing',
-#          'flushing',
-#          'brushing',
-#          'shaver',
-#          'frying',
-#          'chopping',
-#          'micro',
-#          'boiling', 
-#          'blender',
-#          'TV', 
-#          'piano', 
-#          'vacuum',  
-#          'washing',
-#          'chatting', 
-#          'strolling']
-classes=['washing','chatting','strolling']
-markname = './processed_user_data/0/original_'   # path to save
-option = 0
+classes = ['bathing',
+          'flushing',
+          'brushing',
+          'shaver',
+          'frying',
+          'chopping',
+          'micro',
+          'boiling', 
+          'blender',
+          'TV', 
+          'piano', 
+          'vacuum',  
+          'washing',
+          'chatting', 
+          'strolling']
+#classes=['washing','chatting','strolling']
+markname = './processed_user_data/6/0.9/dropping_'   # path to save
+option = 6
 
-rootdir = "G:/Research4-ARprivacy/scripted study/"   # dir to load audio clips
+rootdir = "./scripted study/"   # dir to load audio clips
 new_sampling_rate=16000   # Hz
-window_length_secs=0.1   # sec
-hop_length_secs = 0.05 #   sec
+window_length_secs=0.06   # sec
+hop_length_secs = window_length_secs #   sec
 
 #%% 
 def list_files(wav_list, target_list, rootdir, target): 

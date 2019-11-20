@@ -17,7 +17,7 @@ import numpy as np
 import resampy
 import copy as cp
 
-np.random.seed(0)
+#np.random.seed(0)
 #os.chdir('/home/dawei/research4')   # Set main dir
 #print(os.path.abspath(os.path.curdir))
 
@@ -158,10 +158,13 @@ def frames_processing(frames, option):
         frames_new = cp.deepcopy(frames)
         percentage = 0.7   # % of frames to be replaced
         neighbor_range = 50   # range of nearby frames, one-sided
+        # If size of the frames is less than neighbor_range, use that to replace neighbor_range
+        if frames.shape[0] < neighbor_range * 2:
+            neighbor_range = frames.shape[0] // 2
         # select target frames
         frames_to_be_replaced = np.random.choice(np.arange(0, frames.shape[0]), 
-                                          size=round(percentage*(frames.shape[0]-neighbor_range*2)),
-                                          replace=False)
+                                                 size=round(percentage*(frames.shape[0])),
+                                                 replace=False)
         print('frames to be replaced:', np.sort(frames_to_be_replaced), 'size:', len(frames_to_be_replaced))
         for i in frames_to_be_replaced:
             # select a nearby frame, including the target frame itself
@@ -173,14 +176,14 @@ def frames_processing(frames, option):
             else:
                 neighbour = np.random.choice(np.arange(i-neighbor_range, i+neighbor_range))   
             # replacement
-            frames_new[i] = frames[neighbour]   
+            frames_new[i] = frames[neighbour] 
             
     elif option == 5:
         frames_new = cp.deepcopy(frames)
         np.random.shuffle(frames_new)   # only 1st axis (frame index) is shuffled
         
     elif option == 6:
-        percentage = 0.7   # % of frames to drop
+        percentage = 0.9   # % of frames to drop
          # select target frames
         frames_to_drop = np.random.choice(frames.shape[0], 
                                           size=round(percentage*frames.shape[0]),
@@ -190,7 +193,7 @@ def frames_processing(frames, option):
         frames_new = np.delete(frames, frames_to_drop, axis=0)
         
     elif option == 7:
-        percentage = 0.5   # % of frames to be copied
+        percentage = 0.9   # % of frames to be copied
         frames_new = cp.deepcopy(frames)
         frames_new = frames_new.tolist()
         # select target frames
