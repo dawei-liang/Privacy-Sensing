@@ -10,3 +10,5 @@ Load user field data and saved the processed data: _data_preparation_user.py_ (_
 Load (processed) user data and do mfcc extraction, 5-fold cross validation: _train_test_user.py_ (_wav_read.py_)
 
 Enhance web collected audio (format conversion and volumn change): _audio_enhancement.py_
+
+Calculate Mechanical Turk results: _read_mturk_files.py_
