@@ -18,3 +18,10 @@ Calculate Mechanical Turk results: _read_mturk_files.py_
 Test an audio clip with privacy protection: _wav_test.py_ (_wav_read.py_, _pca.py_)
 
 
+Partially adopted from: https://github.com/anuragkr90/weak_feature_extractor, by Kumar et al., ICASSP 18
+
+Load the esc wav files, degrade, and save the degraded mfcc frames(csv) or full wav clips(wav): _load_esc.py (wav_read.py)_
+
+Load processed wav, compute segment spectrogram, extract embedding features, and save as csv (require torch): _feat_extractor.py (extractor.py, network_architectures.py)_
+
+Evaluation for esc data: _train_test_esc.py (check_dirs.py)_
