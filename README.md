@@ -25,5 +25,7 @@ Load the esc wav files, degrade, and save the degraded mfcc frames(in csv) or fu
 Load processed wav, compute segment spectrogram, extract embedding features, and save as csv (require torch): _feat_extractor.py (extractor.py, network_architectures.py)_
 
 Evaluation for esc features: 
+
 for embedding features from transfer leanring: _train_test_esc_tl.py (check_dirs.py)_
+
 for mfcc features:  _train_test_esc_mfcc.py (check_dirs.py)_
