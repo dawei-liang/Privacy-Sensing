@@ -11,12 +11,15 @@ Load class-based data (option 0 from _data_preparation_user.py_) and saved the p
 
 Load (processed) user data and do mfcc extraction, 5-fold cross validation: _train_test_user.py_ (_wav_read.py_)
 
+==============================================================
+
 Enhance web collected audio (format conversion and volumn change): _audio_enhancement.py_
 
 Calculate Mechanical Turk results: _read_mturk_files.py_
 
 Test an audio clip with privacy protection: _wav_test.py_ (_wav_read.py_, _pca.py_)
 
+==============================================================
 
 Partially adopted from: https://github.com/anuragkr90/weak_feature_extractor, by Kumar et al., ICASSP 18
 
