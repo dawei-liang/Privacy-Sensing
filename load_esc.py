@@ -35,7 +35,7 @@ import check_dirs
 
 root = './ESC-dataset/ESC-50-master/ESC-50-master/'   # root to load data and meta table
 option = 7
-save_mfcc_dir = './esc_features/mfcc/' + 'option' + str(option) + '-0.5/'   # dir to save mfcc features, only used extract_mfcc == True
+save_mfcc_dir = './esc_features/mfcc/' + 'option' + str(option) + '-0.5/'   # dir to save mfcc features, only used if extract_mfcc == True
 save_degraded_segment_dir = './processed_audio/option' + str(option) + '-0.9/' # dir to save degraded audio segments, only used if extract_mfcc == False
 extract_mfcc = False
 
